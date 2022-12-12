@@ -1,9 +1,10 @@
-FROM openjdk:8-jdk-alpine
-VOLUME /tmp
-ARG JAVA_OPTS
-ENV JAVA_OPTS=$JAVA_OPTS
-COPY build/libs/codespaces-blank-0.0.1.jar codespacesblank.jar
-EXPOSE 3000
-ENTRYPOINT exec java $JAVA_OPTS -jar codespacesblank.jar
-# For Spring-Boot project, use the entrypoint below to reduce Tomcat startup time.
-#ENTRYPOINT exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar codespacesblank.jar
+FROM gradle:7.4.1 AS build
+COPY --chown=gradle:gradle . /home/gradle/src
+WORKDIR /home/gradle/src
+RUN gradle build
+
+FROM openjdk:8-jre-slim
+EXPOSE 8080
+COPY --from=build /home/gradle/src/build/libs/spring-petclinic-kotlin-2.6.2.jar /app/
+RUN bash -c 'touch /app/spring-petclinic-kotlin-2.6.2.jar'
+ENTRYPOINT ["java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap", "-Djava.security.egd=file:/dev/./urandom","-jar","/app/spring-petclinic-kotlin-2.6.2.jar"]
